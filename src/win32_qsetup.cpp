@@ -10,7 +10,7 @@
 
 #define INI_IMPLEMENTATION
 #include <mattias_g/ini.h>
-#include <microsoft_craziness.h>
+#include "microsoft_craziness.h" 
 
 #define VERSION 100
 #define MAX_VAR_LENGTH 32767
