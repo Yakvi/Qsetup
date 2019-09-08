@@ -1,0 +1,20 @@
+{
+    "terminal.integrated.shellArgs.windows": [
+        "powershell -NoLogo -NoExit cd ./src"
+    ],
+    "multiCommand.commands": [
+        {
+            "command": "multiCommand.compile",
+            "sequence": [
+                "workbench.action.terminal.clear",
+                {
+                    "command": "runInTerminal.run", 
+                    "args": {
+                        "cmd": "./build.ps1",
+                        "match": ".*"
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,1 @@
+..\..\cloc.exe --no3 $pwd
