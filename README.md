@@ -7,4 +7,9 @@ Optionally, create _GlobalLibs.ini_ in the same folder of the executable with ex
 
 Qsetup will run a new PowerShell shell with the specified environment variables set up; these will not persist upon exit.
 
-Dependency: [ini.h](https://github.com/mattiasgustavsson/libs/blob/master/docs/ini.md)
+Dependencies: 
+
+* [ini.h](https://github.com/mattiasgustavsson/libs/blob/master/docs/ini.md)
+* microsoft_craziness.h (modified to have include paths as well and included with the source)
+
+License: MIT
