@@ -50,7 +50,6 @@ Write-Host "Compilation started at $(Get-Date -DisplayHint Date)"
 H:\C\vcvars.ps1
 Write-Host ""
 
-# WIN32 PLATFORM LAYER
 cl $c -O2 ..\$srcDir\$win32file $linker
 
 Write-Host ""
