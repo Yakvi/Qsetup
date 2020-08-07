@@ -60,7 +60,7 @@ IsAlreadyRunning()
 {
     bool Result = false;
     char Buffer[2] = {};
-    const char* Env = "QCOMPILE";
+    const char* Env = "QSETUP";
 
     GetEnvironmentVariableA(Env, Buffer, 2);
     if (*Buffer == '1')
@@ -182,6 +182,7 @@ main(int argc, const char* argv)
         AddToEnvironmentVariable(L"INCLUDE", Result.vs_include_path);
         AddToEnvironmentVariable(L"INCLUDE", Result.windows_sdk_ucrt_include_path);
         AddToEnvironmentVariable(L"INCLUDE", Result.windows_sdk_um_include_path);
+        AddToEnvironmentVariable(L"INCLUDE", Result.windows_sdk_winrt_include_path);
         AddToEnvironmentVariable(L"INCLUDE", Result.windows_sdk_shared_include_path);
 
         char* GlobalConfigPath = GetFullPath("GlobalLibs.ini");

@@ -1,6 +1,6 @@
 {
     "terminal.integrated.shellArgs.windows": [
-        "powershell -NoLogo -NoExit cd ./src"
+        "cd ./src; qsetup"
     ],
     "multiCommand.commands": [
         {

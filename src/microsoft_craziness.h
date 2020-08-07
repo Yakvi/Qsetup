@@ -60,6 +60,7 @@ struct Find_Result {
 
     wchar_t *windows_sdk_um_include_path   = NULL;    
     wchar_t *windows_sdk_ucrt_include_path = NULL;
+    wchar_t *windows_sdk_winrt_include_path = NULL;
     wchar_t *windows_sdk_shared_include_path = NULL;
     
     wchar_t *vs_exe_path = NULL;
@@ -76,6 +77,7 @@ void free_resources(Find_Result *result) {
 
     free(result->windows_sdk_include_root);
     free(result->windows_sdk_ucrt_include_path);
+    free(result->windows_sdk_winrt_include_path);
     free(result->windows_sdk_um_include_path);
     free(result->windows_sdk_shared_include_path);
 
@@ -571,6 +573,7 @@ Find_Result find_visual_studio_and_windows_sdk() {
     if (result.windows_sdk_include_root) {
         result.windows_sdk_um_include_path   = concat(result.windows_sdk_include_root, L"\\um");
         result.windows_sdk_ucrt_include_path = concat(result.windows_sdk_include_root, L"\\ucrt");
+        result.windows_sdk_winrt_include_path = concat(result.windows_sdk_include_root, L"\\winrt");
         result.windows_sdk_shared_include_path = concat(result.windows_sdk_include_root, L"\\shared");
     }
 
