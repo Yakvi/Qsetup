@@ -5,7 +5,7 @@
 
 Tired of waiting several seconds for `vcvarsall` to run? Tired of searching and updating your Visual Studio paths each time there's a new update? This tool is for you. 
 
-QSetup creates a frame around [Jonathan's Blow](https://en.wikipedia.org/wiki/Jonathan_Blow) solution to these problems. Simply boot up your shell (PowerShell or Command Prompt), run `qsetup` and start programming!
+QSetup creates a frame around [Jonathan Blow's](https://en.wikipedia.org/wiki/Jonathan_Blow) solution to these problems. Simply boot up your shell (PowerShell or Command Prompt), run `qsetup` and start programming!
 
 ## Description
 
