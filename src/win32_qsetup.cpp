@@ -2,43 +2,61 @@
  * 
  * Quick MSVC Setup, a helper tool for quick setup of the dev environment on Windows. 
  * By Ivan "Yakvi" Yakymchak
- * Version 1.0, Aug 12-Sep 8, 2019
- * This program implements modified version of microsoft_craziness.h, original version 2, by Jonathan Blow (MIT License). 
- * This code is also released under MIT License which you can find at: https://opensource.org/licenses/MIT
+ * Version 1.1.0, 2020
+ * This program implements modified version of microsoft_craziness.h, version 2, by Jonathan Blow (MIT License)
+ * This program implements ini.h, by Mattias Gustavsson (MIT / PD)
+ * This code is also released under dual license, details can be found at the end of the file.
  * 
 * * * * * * * * * * * * * * * * * * * * * * * */
-#define FILE_MODE 0
 
 #define INI_IMPLEMENTATION
 #include <mattias_g/ini.h>
 #include "microsoft_craziness.h"
 
-#define VERSION 100
+#define VERSION 110
+#define DEBUG_STRING_LENGTH 32767
 #define MAX_VAR_LENGTH 32767
-#define internal static
+#define local static
 
-internal void
-DebugPrintVars(Find_Result* Result)
+local void
+DebugPrintVars(Find_Result* Result, wchar_t* DebugInfo, int DebugInfoLength)
 {
-    printf("VISUAL STUDIO PATH\n");
-    printf("    MSVC executables:           %ls\n", Result->vs_exe_path);
-    printf("    vcruntime Includes:         %ls\n", Result->vs_include_path);
-    printf("    vcruntime Libraries:        %ls\n", Result->vs_library_path);
+    if (Result->windows_sdk_version) {
+        const int BufferCount = 200;
+        wchar_t   Buffer[BufferCount];
+        _snwprintf(Buffer, BufferCount, L"VISUAL STUDIO PATH\n");
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
 
-    printf("WINDOWS SDK PATH PATH\n");
-    printf("    SDK Version:                %u\n", Result->windows_sdk_version); // Zero if no Windows SDK found.
-    printf("    SDK Libs Root Folder:       %ls\n", Result->windows_sdk_lib_root);
-    printf("    SDK Universal CRT Libs:     %ls\n", Result->windows_sdk_ucrt_library_path);
-    printf("    SDK User Mode Libs:         %ls\n", Result->windows_sdk_um_library_path);
+        _snwprintf(Buffer, BufferCount, L"    MSVC executables:           %ls\n", Result->vs_exe_path);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        _snwprintf(Buffer, BufferCount, L"    vcruntime Includes:         %ls\n", Result->vs_include_path);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        _snwprintf(Buffer, BufferCount, L"    vcruntime Libraries:        %ls\n\n", Result->vs_library_path);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
 
-    printf("    SDK Includes Root Folder:   %ls\n", Result->windows_sdk_include_root);
-    printf("    SDK Universal CRT Includes: %ls\n", Result->windows_sdk_ucrt_include_path);
-    printf("    SDK User Mode Includes:     %ls\n", Result->windows_sdk_um_include_path);
-    printf("    SDK WinRT Includes:        %ls\n", Result->windows_sdk_winrt_include_path);
-    printf("    SDK Shared Includes:        %ls\n", Result->windows_sdk_shared_include_path);
+        _snwprintf(Buffer, BufferCount, L"WINDOWS SDK PATH PATH\n");
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        _snwprintf(Buffer, BufferCount, L"    SDK Libs Root Folder:       %ls\n", Result->windows_sdk_lib_root);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        _snwprintf(Buffer, BufferCount, L"    SDK Universal CRT Libs:     %ls\n", Result->windows_sdk_ucrt_library_path);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        _snwprintf(Buffer, BufferCount, L"    SDK User Mode Libs:         %ls\n", Result->windows_sdk_um_library_path);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+
+        _snwprintf(Buffer, BufferCount, L"    SDK Includes Root Folder:   %ls\n", Result->windows_sdk_include_root);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        _snwprintf(Buffer, BufferCount, L"    SDK Universal CRT Includes: %ls\n", Result->windows_sdk_ucrt_include_path);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        _snwprintf(Buffer, BufferCount, L"    SDK User Mode Includes:     %ls\n", Result->windows_sdk_um_include_path);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        _snwprintf(Buffer, BufferCount, L"    SDK WinRT Includes:         %ls\n", Result->windows_sdk_winrt_include_path);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        _snwprintf(Buffer, BufferCount, L"    SDK Shared Includes:        %ls\n", Result->windows_sdk_shared_include_path);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+    }
 }
 
-internal bool
+local bool
 AddToEnvironmentVariable(wchar_t* Variable, wchar_t* ExtraParams, wchar_t* BatBuffer)
 {
     bool Result = false;
@@ -61,7 +79,7 @@ AddToEnvironmentVariable(wchar_t* Variable, wchar_t* ExtraParams, wchar_t* BatBu
     return (Result);
 }
 
-internal bool
+local bool
 IsAlreadyRunning()
 {
     bool        Result    = false;
@@ -79,7 +97,7 @@ IsAlreadyRunning()
     return (Result);
 }
 
-internal void
+local void
 RemoveFileName(char* Path, int MaxLength)
 {
     int At        = 0;
@@ -101,7 +119,7 @@ RemoveFileName(char* Path, int MaxLength)
     }
 }
 
-internal void
+local void
 WriteEntireFile(wchar_t* Buffer, wchar_t* Path)
 {
     size_t StrSize = wcslen(Buffer);
@@ -117,7 +135,7 @@ WriteEntireFile(wchar_t* Buffer, wchar_t* Path)
     }
 }
 
-internal char*
+local char*
 ReadEntireFile(char* Path)
 {
     char* Data = 0;
@@ -135,7 +153,7 @@ ReadEntireFile(char* Path)
     return (Data);
 }
 
-internal char*
+local char*
 GetFullPath(const char* Filename)
 {
     char*   Path   = (char*)malloc(MAX_VAR_LENGTH);
@@ -147,7 +165,7 @@ GetFullPath(const char* Filename)
     return (Path);
 }
 
-internal void
+local void
 AddVariablesFromConfigFile(char* Data, wchar_t* BatBuffer)
 {
     if (Data) {
@@ -177,28 +195,34 @@ AddVariablesFromConfigFile(char* Data, wchar_t* BatBuffer)
 int
 main(int argc, const char* argv)
 {
-    bool ShowDebug = argc > 1;
+    bool ShowDebug = argc > 1; // any argument enables debug mode
 
+#if FILE_MODE
     wchar_t BatBuffer[MAX_VAR_LENGTH] = {};
-    if (!ShowDebug) wcscat_s(BatBuffer, L"@echo off\n");
+    wcscat_s(BatBuffer, L"@echo off\n");
+#else
+    wchar_t BatBuffer[1];
+#endif
 
     if (!IsAlreadyRunning()) {
-        Find_Result Result = find_visual_studio_and_windows_sdk();
+        Find_Result WinSDK = find_visual_studio_and_windows_sdk();
 
-        AddToEnvironmentVariable(L"Path", Result.vs_exe_path, BatBuffer);
+        if (WinSDK.windows_sdk_version) {
+            AddToEnvironmentVariable(L"Path", WinSDK.vs_exe_path, BatBuffer);
 
-        AddToEnvironmentVariable(L"LIB", Result.vs_library_path, BatBuffer);
-        AddToEnvironmentVariable(L"LIB", Result.windows_sdk_ucrt_library_path, BatBuffer);
-        AddToEnvironmentVariable(L"LIB", Result.windows_sdk_um_library_path, BatBuffer);
+            AddToEnvironmentVariable(L"LIB", WinSDK.vs_library_path, BatBuffer);
+            AddToEnvironmentVariable(L"LIB", WinSDK.windows_sdk_ucrt_library_path, BatBuffer);
+            AddToEnvironmentVariable(L"LIB", WinSDK.windows_sdk_um_library_path, BatBuffer);
 
-        AddToEnvironmentVariable(L"LIBPATH", Result.windows_sdk_ucrt_library_path, BatBuffer);
-        AddToEnvironmentVariable(L"LIBPATH", Result.windows_sdk_um_library_path, BatBuffer);
+            AddToEnvironmentVariable(L"LIBPATH", WinSDK.windows_sdk_ucrt_library_path, BatBuffer);
+            AddToEnvironmentVariable(L"LIBPATH", WinSDK.windows_sdk_um_library_path, BatBuffer);
 
-        AddToEnvironmentVariable(L"INCLUDE", Result.vs_include_path, BatBuffer);
-        AddToEnvironmentVariable(L"INCLUDE", Result.windows_sdk_ucrt_include_path, BatBuffer);
-        AddToEnvironmentVariable(L"INCLUDE", Result.windows_sdk_um_include_path, BatBuffer);
-        AddToEnvironmentVariable(L"INCLUDE", Result.windows_sdk_winrt_include_path, BatBuffer);
-        AddToEnvironmentVariable(L"INCLUDE", Result.windows_sdk_shared_include_path, BatBuffer);
+            AddToEnvironmentVariable(L"INCLUDE", WinSDK.vs_include_path, BatBuffer);
+            AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_ucrt_include_path, BatBuffer);
+            AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_um_include_path, BatBuffer);
+            AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_winrt_include_path, BatBuffer);
+            AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_shared_include_path, BatBuffer);
+        }
 
         char* GlobalConfigPath = GetFullPath("GlobalLibs.ini");
         char* Data             = ReadEntireFile(GlobalConfigPath);
@@ -207,21 +231,108 @@ main(int argc, const char* argv)
         Data = ReadEntireFile("Libs.ini");
         AddVariablesFromConfigFile(Data, BatBuffer); // Local settings
 
-        system("cls||clear");
-        if (ShowDebug) DebugPrintVars(&Result);
-        free_resources(&Result);
+        wchar_t DebugOutput[DEBUG_STRING_LENGTH];
+        DebugOutput[0] = L'\n';
+        if (ShowDebug) DebugPrintVars(&WinSDK, DebugOutput, DEBUG_STRING_LENGTH);
+
+        int SDK_version = WinSDK.windows_sdk_version;
+        free_resources(&WinSDK); // Cleanup
+
+        // Create work environment / output file
+        wchar_t Message[200];
+        if (SDK_version) {
+            _snwprintf_s(Message, 200, L"Environment variables set. Windows SDK v. %d\n", SDK_version);
+        }
+        else {
+            _snwprintf_s(Message, 200, L"Environment variables set. Windows SDK not found\n");
+        }
 
 #if POWERSHELL_MODE
-        printf("Environment variables set.\n");
+        system("clear");
+        wprintf(Message);
         system("powershell -NoLogo -NoExit");
 #elif FILE_MODE
-        wcscat_s(BatBuffer, L"echo Environment Variables Set in File Mode.\n");
+        wcscat_s(BatBuffer, L"echo ");
+        wcscat_s(BatBuffer, Message);
         WriteEntireFile(BatBuffer, L"qsetup.bat");
-        // system("call qsetup.bat");
-        // system("del qsetup.bat"); // TODO: If exists, test if variables inside exisVariableing qsetup need updating
+        system("echo Qsetup.bat generated in %cd%.");
 #else // CMD mode
-        system("cmd /k \"cls & echo Environment Variables Set.\"");
+        system("cls");
+        wchar_t Command[100];
+        wcscat_s(Command, L"cmd /k \"cls & echo ");
+        wcscat_s(Command, Message);
+        wcscat_s(Command, L"\"");
+
+        _wsystem(Command);
 #endif
+        if (ShowDebug) wprintf(DebugOutput);
+    }
+    else {
+        printf("This program is already running! Please exit the shell and try again.");
     }
     return (0);
 }
+
+/*
+
+revision history:
+    1.1     added CMD and bat export modes, cleanup
+    1.0     first publicly released version (Powershell mode)
+
+*/
+
+/*
+------------------------------------------------------------------------------
+
+This software is available under 2 licenses - you may choose the one you like.
+
+------------------------------------------------------------------------------
+
+ALTERNATIVE A - MIT License
+
+Copyright (c) 2020 Ivan Yakymchak
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+
+------------------------------------------------------------------------------
+
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
+software, either in source code form or as a compiled binary, for any purpose, 
+commercial or non-commercial, and by any means.
+
+In jurisdictions that recognize copyright laws, the author or authors of this 
+software dedicate any and all copyright interest in the software to the public 
+domain. We make this dedication for the benefit of the public at large and to 
+the detriment of our heirs and successors. We intend this dedication to be an 
+overt act of relinquishment in perpetuity of all present and future rights to 
+this software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+------------------------------------------------------------------------------
+*/
