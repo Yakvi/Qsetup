@@ -35,7 +35,7 @@ If you pass any argument to one of the executables, the default variables will b
 ### Dependencies: 
 
 * [ini.h](https://github.com/mattiasgustavsson/libs/blob/master/docs/ini.md)
-* [microsoft_craziness.h]((https://pastebin.com/SX3mSC9n)) (modified to have include paths as well and included with the source)
+* [microsoft_craziness.h](https://pastebin.com/SX3mSC9n) (modified)
 
 ### Limitations 
 
