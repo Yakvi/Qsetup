@@ -248,7 +248,7 @@ main(int argc, const char* argv)
         }
 
 #if POWERSHELL_MODE
-        system("clear");
+        system("cls || clear");
         wprintf(Message);
         system("powershell -NoLogo -NoExit");
 #elif FILE_MODE
@@ -257,7 +257,7 @@ main(int argc, const char* argv)
         WriteEntireFile(BatBuffer, L"qsetup.bat");
         system("echo Qsetup.bat generated in %cd%.");
 #else // CMD mode
-        system("cls");
+        system("cls || clear");
         wchar_t Command[100];
         wcscat_s(Command, L"cmd /k \"cls & echo ");
         wcscat_s(Command, Message);
