@@ -35,18 +35,20 @@ Clear
 If (-Not($((get-item $pwd).Name) -match $srcDir)) { cd $srcDir } 
 Set-Location ..\$buildDir
 Write-Host "Compilation started at $(Get-Date -DisplayHint Date)"
-H:\C\vcvars.ps1
+# H:\C\vcvars.ps1
 Write-Host ""
 
 # NOTE release mode
-cl $c -O2 -DPOWERSHELL_MODE=1 -FeQSetup_ps   ..\$srcDir\$win32file  $linker
-cl $c -O2 -DFILE_MODE=1       -FeQSetup_file ..\$srcDir\$win32file  $linker
-cl $c -O2                     -FeQSetup      ..\$srcDir\$win32file $linker
+cl $c -O2 -DCMD_MODE=1        -FeQSetup       ..\$srcDir\$win32file $linker
+cl $c -O2 -DPOWERSHELL_MODE=1 -FeQSetup_ps    ..\$srcDir\$win32file $linker
+cl $c -O2 -DFILE_MODE=1       -FeQSetup_file  ..\$srcDir\$win32file $linker
+cl $c -O2 -DCOMMAND_MODE=1    -FeQCompile     ..\$srcDir\$win32file $linker
 
 # NOTE debug mode
-# cl $c $debug -Od -DPOWERSHELL_MODE=1 -FeQSetup_ps   ..\$srcDir\$win32file  $linker
-# cl $c $debug -Od -DFILE_MODE=1       -FeQSetup_file ..\$srcDir\$win32file  $linker
-# cl $c $debug -Od                     -FeQSetup      ..\$srcDir\$win32file $linker
+# cl $c $debug -Od -DCMD_MODE=1        -FeQSetup       ..\$srcDir\$win32file $linker
+# cl $c $debug -Od -DPOWERSHELL_MODE=1 -FeQSetup_ps    ..\$srcDir\$win32file  $linker
+# cl $c $debug -Od -DFILE_MODE=1       -FeQSetup_file  ..\$srcDir\$win32file  $linker
+# cl $c $debug -Od -DCOMMAND_MODE=1    -FeQCompile     ..\$srcDir\$win32file  $linker
 
 Write-Host ""
 Write-Host "Compilation finished at $(Get-Date -DisplayHint Date)"

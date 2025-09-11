@@ -1,16 +1,16 @@
 /* * * * * * * * * * * * * * * * * * * * * * *
- * 
- * Quick MSVC Setup, a helper tool for quick setup of the dev environment on Windows. 
+ *
+ * Quick MSVC Setup, a helper tool for quick setup of the dev environment on Windows.
  * By Ivan "Yakvi" Yakymchak
- * Version 1.1.0, 2020
+ * Version 1.2.0, 2020-2025
  * This program implements modified version of microsoft_craziness.h, version 2, by Jonathan Blow (MIT License)
  * This program implements ini.h, by Mattias Gustavsson (MIT / PD)
- * This code is also released under dual license, details can be found at the end of the file.
- * 
+ * This code is released under dual license, details can be found at the end of the file.
+ *
 * * * * * * * * * * * * * * * * * * * * * * * */
 
 #define INI_IMPLEMENTATION
-#include <mattias_g/ini.h>
+#include "ini.h"
 #include "microsoft_craziness.h"
 
 #define VERSION 110
@@ -22,7 +22,7 @@ local void
 DebugPrintVars(Find_Result* Result, wchar_t* DebugInfo, int DebugInfoLength)
 {
     if (Result->windows_sdk_version) {
-        const int BufferCount = 200;
+        const int BufferCount = 1024;
         wchar_t   Buffer[BufferCount];
         _snwprintf(Buffer, BufferCount, L"VISUAL STUDIO PATH\n");
         wcscat_s(DebugInfo, DebugInfoLength, Buffer);
@@ -53,6 +53,11 @@ DebugPrintVars(Find_Result* Result, wchar_t* DebugInfo, int DebugInfoLength)
         wcscat_s(DebugInfo, DebugInfoLength, Buffer);
         _snwprintf(Buffer, BufferCount, L"    SDK Shared Includes:        %ls\n", Result->windows_sdk_shared_include_path);
         wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+
+        _snwprintf(Buffer, BufferCount, L"    SDK Executable Root Folder:       %ls\n", Result->windows_sdk_bin_root);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        _snwprintf(Buffer, BufferCount, L"    SDK Executable Full Folder:       %ls\n", Result->windows_sdk_bin_path);
+        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
     }
 }
 
@@ -60,8 +65,10 @@ local bool
 AddToEnvironmentVariable(wchar_t* Variable, wchar_t* ExtraParams, wchar_t* BatBuffer)
 {
     bool Result = false;
-
-    if (ExtraParams) {
+    
+    size_t ParamLen = wcslen(ExtraParams);
+    
+    if (ParamLen) {
 #if FILE_MODE
         wchar_t Buffer[MAX_VAR_LENGTH] = {};
         swprintf_s(Buffer, L"set %s=\"%s\";%%%s%%\n", Variable, ExtraParams, Variable);
@@ -69,13 +76,14 @@ AddToEnvironmentVariable(wchar_t* Variable, wchar_t* ExtraParams, wchar_t* BatBu
 #else
         wchar_t Buffer[MAX_VAR_LENGTH] = {};
         GetEnvironmentVariableW(Variable, Buffer, MAX_VAR_LENGTH);
-        wcscat_s(Buffer, L";");
+        if (*Buffer) wcscat_s(Buffer, L";");
+        ExtraParams[ParamLen] = 0;
         wcscat_s(Buffer, ExtraParams);
         SetEnvironmentVariableW(Variable, Buffer);
 #endif
         Result = true;
     }
-
+    
     return (Result);
 }
 
@@ -85,7 +93,7 @@ IsAlreadyRunning()
     bool        Result    = false;
     char        Buffer[2] = {};
     const char* Env       = "QSETUP";
-
+    
     GetEnvironmentVariableA(Env, Buffer, 2);
     if (*Buffer == '1') {
         Result = true;
@@ -93,7 +101,7 @@ IsAlreadyRunning()
     else {
         SetEnvironmentVariableA(Env, "1");
     }
-
+    
     return (Result);
 }
 
@@ -113,7 +121,7 @@ RemoveFileName(char* Path, int MaxLength)
             break;
         }
     }
-
+    
     if (LastBreak) {
         Path[LastBreak] = 0;
     }
@@ -129,7 +137,7 @@ WriteEntireFile(wchar_t* Buffer, wchar_t* Path)
             if (fwrite(Buffer, sizeof(wchar_t), StrSize, fp) != StrSize) {
                 printf("fwrite failed!\n");
             }
-
+            
             fclose(fp);
         }
     }
@@ -149,7 +157,7 @@ ReadEntireFile(char* Path)
         Data[Size] = '\0';
         fclose(fp);
     }
-
+    
     return (Data);
 }
 
@@ -161,7 +169,7 @@ GetFullPath(const char* Filename)
     GetModuleFileNameA(Module, Path, MAX_VAR_LENGTH);
     RemoveFileName(Path, MAX_VAR_LENGTH);
     snprintf(Path, MAX_VAR_LENGTH, "%s%s", Path, Filename);
-
+    
     return (Path);
 }
 
@@ -171,7 +179,7 @@ AddVariablesFromConfigFile(char* Data, wchar_t* BatBuffer)
     if (Data) {
         ini_t* IniData = ini_load(Data, 0);
         free(Data);
-
+        
         int Section       = INI_GLOBAL_SECTION;
         int PropertyCount = ini_property_count(IniData, Section);
         for (int PropertyIndex = 0;
@@ -180,64 +188,78 @@ AddVariablesFromConfigFile(char* Data, wchar_t* BatBuffer)
             const char* Property = ini_property_name(IniData, Section, PropertyIndex);
             wchar_t     PropertyW[MAX_VAR_LENGTH];
             mbstowcs(PropertyW, Property, MAX_VAR_LENGTH);
-
+            
             const char* Value = ini_property_value(IniData, Section, PropertyIndex);
             wchar_t     ValueW[MAX_VAR_LENGTH];
             mbstowcs(ValueW, Value, MAX_VAR_LENGTH);
-
+            
             AddToEnvironmentVariable(PropertyW, ValueW, BatBuffer);
         }
-
+        
         ini_destroy(IniData);
     }
 }
 
 int
-main(int argc, const char* argv)
+main(int argc, char** argv)
 {
-    bool ShowDebug = argc > 1; // any argument enables debug mode
-
+    bool ShowDebug = false;
+    char *Command = 0;
+    for (int i = 1; i < argc; i++) {
+        char* Arg = argv[i];
+        if (*Arg != '\\' && *Arg != '-') {
+            Command = Arg;
+            continue;
+        }
+        ++Arg;
+        
+        if (*Arg == 'd' || *Arg == 'D') {
+            ShowDebug = true;
+        }
+    }
+    
 #if FILE_MODE
     wchar_t BatBuffer[MAX_VAR_LENGTH] = {};
     wcscat_s(BatBuffer, L"@echo off\n");
 #else
     wchar_t BatBuffer[1];
 #endif
-
+    
     if (!IsAlreadyRunning()) {
         Find_Result WinSDK = find_visual_studio_and_windows_sdk();
-
+        
         if (WinSDK.windows_sdk_version) {
             AddToEnvironmentVariable(L"Path", WinSDK.vs_exe_path, BatBuffer);
-
+            AddToEnvironmentVariable(L"Path", WinSDK.windows_sdk_bin_path, BatBuffer);
+            
             AddToEnvironmentVariable(L"LIB", WinSDK.vs_library_path, BatBuffer);
             AddToEnvironmentVariable(L"LIB", WinSDK.windows_sdk_ucrt_library_path, BatBuffer);
             AddToEnvironmentVariable(L"LIB", WinSDK.windows_sdk_um_library_path, BatBuffer);
-
+            
             AddToEnvironmentVariable(L"LIBPATH", WinSDK.windows_sdk_ucrt_library_path, BatBuffer);
             AddToEnvironmentVariable(L"LIBPATH", WinSDK.windows_sdk_um_library_path, BatBuffer);
-
+            
             AddToEnvironmentVariable(L"INCLUDE", WinSDK.vs_include_path, BatBuffer);
             AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_ucrt_include_path, BatBuffer);
             AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_um_include_path, BatBuffer);
             AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_winrt_include_path, BatBuffer);
             AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_shared_include_path, BatBuffer);
         }
-
+        
         char* GlobalConfigPath = GetFullPath("GlobalLibs.ini");
         char* Data             = ReadEntireFile(GlobalConfigPath);
         free(GlobalConfigPath);
         AddVariablesFromConfigFile(Data, BatBuffer); // Global settings
         Data = ReadEntireFile("Libs.ini");
         AddVariablesFromConfigFile(Data, BatBuffer); // Local settings
-
+        
         wchar_t DebugOutput[DEBUG_STRING_LENGTH];
         DebugOutput[0] = L'\n';
         if (ShowDebug) DebugPrintVars(&WinSDK, DebugOutput, DEBUG_STRING_LENGTH);
-
+        
         int SDK_version = WinSDK.windows_sdk_version;
         free_resources(&WinSDK); // Cleanup
-
+        
         // Create work environment / output file
         wchar_t Message[200];
         if (SDK_version) {
@@ -256,14 +278,22 @@ main(int argc, const char* argv)
         wcscat_s(BatBuffer, Message);
         WriteEntireFile(BatBuffer, L"qsetup.bat");
         system("echo Qsetup.bat generated in %cd%.");
-#else // CMD mode
+#elif CMD_MODE
         system("cls || clear");
-        wchar_t Command[100];
+        wchar_t Command[200];
         wcscat_s(Command, L"cmd /k \"cls & echo ");
         wcscat_s(Command, Message);
         wcscat_s(Command, L"\"");
 
         _wsystem(Command);
+#elif COMMAND_MODE
+        if (Command) {
+            system(Command);
+        }
+        else {
+            printf("Please provide the command to execute.");        
+        }
+          
 #endif
         if (ShowDebug) wprintf(DebugOutput);
     }
@@ -276,6 +306,7 @@ main(int argc, const char* argv)
 /*
 
 revision history:
+    1.2     added Command export mode for quick batch processing
     1.1     added CMD and bat export modes, cleanup
     1.0     first publicly released version (Powershell mode)
 
@@ -290,24 +321,24 @@ This software is available under 2 licenses - you may choose the one you like.
 
 ALTERNATIVE A - MIT License
 
-Copyright (c) 2020 Ivan Yakymchak
+Copyright (c) 2020-2025 Ivan Yakymchak
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of 
-this software and associated documentation files (the "Software"), to deal in 
-the Software without restriction, including without limitation the rights to 
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
-of the Software, and to permit persons to whom the Software is furnished to do 
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
 so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all 
+The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ------------------------------------------------------------------------------
@@ -316,22 +347,22 @@ ALTERNATIVE B - Public Domain (www.unlicense.org)
 
 This is free and unencumbered software released into the public domain.
 
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-software, either in source code form or as a compiled binary, for any purpose, 
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
 commercial or non-commercial, and by any means.
 
-In jurisdictions that recognize copyright laws, the author or authors of this 
-software dedicate any and all copyright interest in the software to the public 
-domain. We make this dedication for the benefit of the public at large and to 
-the detriment of our heirs and successors. We intend this dedication to be an 
-overt act of relinquishment in perpetuity of all present and future rights to 
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
 this software under copyright law.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ------------------------------------------------------------------------------

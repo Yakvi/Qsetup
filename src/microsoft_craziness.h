@@ -53,6 +53,8 @@
 struct Find_Result {
     int windows_sdk_version;   // Zero if no Windows SDK found.
 
+    wchar_t *windows_sdk_bin_root             = NULL;
+    wchar_t *windows_sdk_bin_path             = NULL;
     wchar_t *windows_sdk_lib_root             = NULL;
     wchar_t *windows_sdk_include_root         = NULL;
     wchar_t *windows_sdk_um_library_path      = NULL;    
@@ -71,6 +73,8 @@ struct Find_Result {
 Find_Result find_visual_studio_and_windows_sdk();
 
 void free_resources(Find_Result *result) {
+    free(result->windows_sdk_bin_root);
+    free(result->windows_sdk_bin_path);
     free(result->windows_sdk_lib_root);
     free(result->windows_sdk_um_library_path);
     free(result->windows_sdk_ucrt_library_path);
@@ -404,6 +408,11 @@ void find_windows_kit_root(Find_Result *result) {
         {
             result->windows_sdk_include_root = data.best_name;
         }
+        data = {0};
+        if(find_windows_kit_path(&data, windows10_root, L"Bin", win10_best))
+        {
+            result->windows_sdk_bin_root = data.best_name;
+        }
     }
     // Look for a Windows 8 entry.
     else if (windows8_root) {
@@ -417,6 +426,11 @@ void find_windows_kit_root(Find_Result *result) {
         if(find_windows_kit_path(&data, windows8_root, L"Include", win8_best))
         {
             result->windows_sdk_include_root = data.best_name;
+        }
+        data = {0};
+        if(find_windows_kit_path(&data, windows8_root, L"Bin", win8_best))
+        {
+            result->windows_sdk_bin_root = data.best_name;
         }
     }
     else
@@ -580,6 +594,11 @@ Find_Result find_visual_studio_and_windows_sdk() {
     if (result.windows_sdk_lib_root) {
         result.windows_sdk_um_library_path   = concat(result.windows_sdk_lib_root, L"\\um\\x64");
         result.windows_sdk_ucrt_library_path = concat(result.windows_sdk_lib_root, L"\\ucrt\\x64");
+    }
+
+    if (result.windows_sdk_bin_root)
+    {
+        result.windows_sdk_bin_path = concat(result.windows_sdk_bin_root, L"\\x64");
     }
 
     find_visual_studio_by_fighting_through_microsoft_craziness(&result);
