@@ -18,51 +18,58 @@
 #define MAX_VAR_LENGTH 32767
 #define local static
 
+struct debug_info {   
+    wchar_t *Buffer;
+	size_t BufferSize;
+    bool ShowDebug;
+};
+
 local void
-DebugPrintVars(Find_Result* Result, wchar_t* DebugInfo, int DebugInfoLength)
+DebugPrintVars(Find_Result* Result, debug_info* Info)
 {
+	if (!Info->ShowDebug) return;
     if (Result->windows_sdk_version) {
         const int BufferCount = 1024;
         wchar_t   Buffer[BufferCount];
         _snwprintf(Buffer, BufferCount, L"VISUAL STUDIO PATH\n");
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
 
         _snwprintf(Buffer, BufferCount, L"    MSVC executables:           %ls\n", Result->vs_exe_path);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
         _snwprintf(Buffer, BufferCount, L"    vcruntime Includes:         %ls\n", Result->vs_include_path);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
         _snwprintf(Buffer, BufferCount, L"    vcruntime Libraries:        %ls\n\n", Result->vs_library_path);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
 
         _snwprintf(Buffer, BufferCount, L"WINDOWS SDK PATH PATH\n");
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
         _snwprintf(Buffer, BufferCount, L"    SDK Libs Root Folder:       %ls\n", Result->windows_sdk_lib_root);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
         _snwprintf(Buffer, BufferCount, L"    SDK Universal CRT Libs:     %ls\n", Result->windows_sdk_ucrt_library_path);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
         _snwprintf(Buffer, BufferCount, L"    SDK User Mode Libs:         %ls\n", Result->windows_sdk_um_library_path);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
 
         _snwprintf(Buffer, BufferCount, L"    SDK Includes Root Folder:   %ls\n", Result->windows_sdk_include_root);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
         _snwprintf(Buffer, BufferCount, L"    SDK Universal CRT Includes: %ls\n", Result->windows_sdk_ucrt_include_path);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
         _snwprintf(Buffer, BufferCount, L"    SDK User Mode Includes:     %ls\n", Result->windows_sdk_um_include_path);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
         _snwprintf(Buffer, BufferCount, L"    SDK WinRT Includes:         %ls\n", Result->windows_sdk_winrt_include_path);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
         _snwprintf(Buffer, BufferCount, L"    SDK Shared Includes:        %ls\n", Result->windows_sdk_shared_include_path);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
 
         _snwprintf(Buffer, BufferCount, L"    SDK Executable Root Folder:       %ls\n", Result->windows_sdk_bin_root);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
         _snwprintf(Buffer, BufferCount, L"    SDK Executable Full Folder:       %ls\n", Result->windows_sdk_bin_path);
-        wcscat_s(DebugInfo, DebugInfoLength, Buffer);
+        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
     }
 }
 
 local bool
-AddToEnvironmentVariable(wchar_t* Variable, wchar_t* ExtraParams, wchar_t* BatBuffer)
+AddToEnvironmentVariable(wchar_t* Variable, wchar_t* ExtraParams, wchar_t* BatBuffer, debug_info* Info)
 {
     bool Result = false;
     
@@ -81,6 +88,13 @@ AddToEnvironmentVariable(wchar_t* Variable, wchar_t* ExtraParams, wchar_t* BatBu
         wcscat_s(Buffer, ExtraParams);
         SetEnvironmentVariableW(Variable, Buffer);
 #endif
+		if (Info->ShowDebug) {
+			const int BufferCount = 1024;
+        	wchar_t   Buffer[BufferCount];
+			_snwprintf_s(Buffer, MAX_VAR_LENGTH, L"Set %ls to %ls\n", Variable, ExtraParams);
+	        wcscat_s(Info->Buffer, Info->BufferSize, Buffer);
+
+		}
         Result = true;
     }
     
@@ -174,7 +188,7 @@ GetFullPath(const char* Filename)
 }
 
 local void
-AddVariablesFromConfigFile(char* Data, wchar_t* BatBuffer)
+AddVariablesFromConfigFile(char* Data, wchar_t* BatBuffer, debug_info* Info)
 {
     if (Data) {
         ini_t* IniData = ini_load(Data, 0);
@@ -193,7 +207,7 @@ AddVariablesFromConfigFile(char* Data, wchar_t* BatBuffer)
             wchar_t     ValueW[MAX_VAR_LENGTH];
             mbstowcs(ValueW, Value, MAX_VAR_LENGTH);
             
-            AddToEnvironmentVariable(PropertyW, ValueW, BatBuffer);
+            AddToEnvironmentVariable(PropertyW, ValueW, BatBuffer, Info);
         }
         
         ini_destroy(IniData);
@@ -203,7 +217,13 @@ AddVariablesFromConfigFile(char* Data, wchar_t* BatBuffer)
 int
 main(int argc, char** argv)
 {
-    bool ShowDebug = false;
+	wchar_t DebugOutput[DEBUG_STRING_LENGTH];
+    DebugOutput[0] = L'\n';
+	debug_info DebugInfo = {
+		DebugOutput,
+		DEBUG_STRING_LENGTH, 
+		false };
+	
     char *Command = 0;
     for (int i = 1; i < argc; i++) {
         char* Arg = argv[i];
@@ -214,7 +234,7 @@ main(int argc, char** argv)
         ++Arg;
         
         if (*Arg == 'd' || *Arg == 'D') {
-            ShowDebug = true;
+            DebugInfo.ShowDebug = true;
         }
     }
     
@@ -229,33 +249,31 @@ main(int argc, char** argv)
         Find_Result WinSDK = find_visual_studio_and_windows_sdk();
         
         if (WinSDK.windows_sdk_version) {
-            AddToEnvironmentVariable(L"Path", WinSDK.vs_exe_path, BatBuffer);
-            AddToEnvironmentVariable(L"Path", WinSDK.windows_sdk_bin_path, BatBuffer);
+            AddToEnvironmentVariable(L"Path", WinSDK.vs_exe_path, BatBuffer, &DebugInfo);
+            AddToEnvironmentVariable(L"Path", WinSDK.windows_sdk_bin_path, BatBuffer, &DebugInfo);
             
-            AddToEnvironmentVariable(L"LIB", WinSDK.vs_library_path, BatBuffer);
-            AddToEnvironmentVariable(L"LIB", WinSDK.windows_sdk_ucrt_library_path, BatBuffer);
-            AddToEnvironmentVariable(L"LIB", WinSDK.windows_sdk_um_library_path, BatBuffer);
+            AddToEnvironmentVariable(L"LIB", WinSDK.vs_library_path, BatBuffer, &DebugInfo);
+            AddToEnvironmentVariable(L"LIB", WinSDK.windows_sdk_ucrt_library_path, BatBuffer, &DebugInfo);
+            AddToEnvironmentVariable(L"LIB", WinSDK.windows_sdk_um_library_path, BatBuffer, &DebugInfo);
             
-            AddToEnvironmentVariable(L"LIBPATH", WinSDK.windows_sdk_ucrt_library_path, BatBuffer);
-            AddToEnvironmentVariable(L"LIBPATH", WinSDK.windows_sdk_um_library_path, BatBuffer);
+            AddToEnvironmentVariable(L"LIBPATH", WinSDK.windows_sdk_ucrt_library_path, BatBuffer, &DebugInfo);
+            AddToEnvironmentVariable(L"LIBPATH", WinSDK.windows_sdk_um_library_path, BatBuffer, &DebugInfo);
             
-            AddToEnvironmentVariable(L"INCLUDE", WinSDK.vs_include_path, BatBuffer);
-            AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_ucrt_include_path, BatBuffer);
-            AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_um_include_path, BatBuffer);
-            AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_winrt_include_path, BatBuffer);
-            AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_shared_include_path, BatBuffer);
+            AddToEnvironmentVariable(L"INCLUDE", WinSDK.vs_include_path, BatBuffer, &DebugInfo);
+            AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_ucrt_include_path, BatBuffer, &DebugInfo);
+            AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_um_include_path, BatBuffer, &DebugInfo);
+            AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_winrt_include_path, BatBuffer, &DebugInfo);
+            AddToEnvironmentVariable(L"INCLUDE", WinSDK.windows_sdk_shared_include_path, BatBuffer, &DebugInfo);
         }
         
         char* GlobalConfigPath = GetFullPath("GlobalLibs.ini");
         char* Data             = ReadEntireFile(GlobalConfigPath);
         free(GlobalConfigPath);
-        AddVariablesFromConfigFile(Data, BatBuffer); // Global settings
+        AddVariablesFromConfigFile(Data, BatBuffer, &DebugInfo); // Global settings
         Data = ReadEntireFile("Libs.ini");
-        AddVariablesFromConfigFile(Data, BatBuffer); // Local settings
+        AddVariablesFromConfigFile(Data, BatBuffer, &DebugInfo); // Local settings
         
-        wchar_t DebugOutput[DEBUG_STRING_LENGTH];
-        DebugOutput[0] = L'\n';
-        if (ShowDebug) DebugPrintVars(&WinSDK, DebugOutput, DEBUG_STRING_LENGTH);
+        DebugPrintVars(&WinSDK, &DebugInfo);
         
         int SDK_version = WinSDK.windows_sdk_version;
         free_resources(&WinSDK); // Cleanup
@@ -295,7 +313,7 @@ main(int argc, char** argv)
         }
           
 #endif
-        if (ShowDebug) wprintf(DebugOutput);
+        if (DebugInfo.ShowDebug) wprintf(DebugOutput);
     }
     else {
         printf("This program is already running! Please exit the shell and try again.");
